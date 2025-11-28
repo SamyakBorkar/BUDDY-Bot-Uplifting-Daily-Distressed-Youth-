@@ -1,9 +1,24 @@
-# Ignore environment files
-.env
-frontend/.env
-backend/.env
+# ------------------------------------------------------
+# UNIVERSAL IGNORES (Applies to Root, Frontend, & Backend)
+# ------------------------------------------------------
 
-# Logs
+# 1. Dependencies (Crucial)
+node_modules/
+**/node_modules/
+
+# 2. Environment Variables (Secrets)
+.env
+.env.local
+.env.*
+**/.env
+
+# 3. Build Outputs
+dist/
+dist-ssr/
+build/
+*.local
+
+# 4. Logs
 logs
 *.log
 npm-debug.log*
@@ -12,13 +27,7 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Node modules and builds
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor and OS files
+# 5. OS & Editor Files
 .vscode/*
 !.vscode/extensions.json
 .idea

@@ -16,6 +16,7 @@ exports.handleChat = async (req, res) => {
     let user = null;
     if (userId) {
       user = await User.findById(userId);
+      console.log("Found user:", user ? { name: user.name, reg_no: user.reg_no, email: user.email } : "User not found");
     }
 
     // If user is flagged -> block chat
@@ -29,23 +30,44 @@ exports.handleChat = async (req, res) => {
       // send emails to counsellors (from env or default)
       const counsellors = DEFAULT_COUNSELLORS.length ? DEFAULT_COUNSELLORS : [process.env.COUNSELLOR_EMAIL].filter(Boolean);
       const recipients = counsellors.length ? counsellors : (user ? [user.email] : []);
-      const subject = `URGENT: Possible suicide/self-harm alert for ${userName || (user && user.name) || "User"}`;
+      
+      const regNo = user?.reg_no || "NOT AVAILABLE";
+      const studentName = userName || (user && user.name) || "Unknown";
+      const studentEmail = user?.email || "N/A";
+      
+      const subject = `🚨 URGENT: Student in Distress - Registration Number: ${regNo}`;
       const text = [
-        `User: ${userName || (user && user.name) || "Unknown"}`,
-        `Reg No: ${user?.reg_no || "N/A"}`,
-        `Email: ${user?.email || "N/A"}`,
+        `==============================================`,
+        `🚨 EMERGENCY ALERT - IMMEDIATE ACTION REQUIRED`,
+        `==============================================`,
         ``,
-        `Detected message: ${message}`,
+        `📋 STUDENT DETAILS:`,
         ``,
-        `Recent moods (last 10):`,
-        ...((user?.moodLogs || []).slice(-10).map(m => `${new Date(m.date).toLocaleString()}: ${m.mood}`) || ["No mood logs"])
+        `Name: ${studentName}`,
+        `Registration Number: ${regNo}`,
+        `Email: ${studentEmail}`,
+        `User ID: ${user?._id || "N/A"}`,
+        `Alert Time: ${new Date().toLocaleString()}`,
+        ``,
+        `==============================================`,
+        `⚠️ DETECTED MESSAGE:`,
+        `"${message}"`,
+        `==============================================`,
+        ``,
+        `📊 Recent mood logs (last 10):`,
+        ...((user?.moodLogs || []).slice(-10).map(m => `  • ${new Date(m.date).toLocaleString()}: ${m.mood}`) || ["  No mood logs available"]),
+        ``,
+        `Please reach out to this student immediately.`
       ].join("\n");
+
+      console.log("📧 Sending alert email for:", { studentName, regNo, studentEmail });
 
       // send email (do not await too long— but await for success here)
       try {
         await sendAlertMail(recipients, subject, text);
+        console.log("✅ Alert email sent successfully");
       } catch (mailErr) {
-        console.error("sendAlertMail failed:", mailErr);
+        console.error("❌ sendAlertMail failed:", mailErr);
         // continue to log even if mail fails
       }
 

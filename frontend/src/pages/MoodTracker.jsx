@@ -1,7 +1,8 @@
 // src/pages/MoodTracker.jsx
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { analyzeMood, generateAdvice } from "../services/ai";
+import { analyzeMood } from "../services/ai";
 import { logMood, getMoodLogs, sendSOS } from "../services/auth";
 
 export default function MoodTracker() {
@@ -9,7 +10,6 @@ export default function MoodTracker() {
   const userId = user?._id || user?.id;
   const [text, setText] = useState("");
   const [analysis, setAnalysis] = useState(null); // { label, score }
-  const [advice, setAdvice] = useState("");
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [analysing, setAnalysing] = useState(false);
@@ -54,11 +54,6 @@ export default function MoodTracker() {
       // backend may return array of moodLogs or user object
       const savedLogs = saved.moodLogs || saved;
       setLogs(Array.isArray(savedLogs) ? savedLogs.slice().reverse() : []);
-
-      // 3) generate a short coping advice (best-effort)
-      const advicePrompt = `Provide 1-2 friendly coping tips for someone who says: "${text}"`;
-      const gen = await generateAdvice(advicePrompt);
-      setAdvice(gen || "Try some deep breathing, a short walk, or talking to a friend.");
     } catch (err) {
       console.error("analyze+save error", err);
       alert("Something went wrong while analyzing/saving your mood.");
@@ -94,64 +89,144 @@ export default function MoodTracker() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white p-6 rounded shadow">
-        <h3 className="text-lg font-semibold mb-2">How are you feeling?</h3>
+    <div className="max-w-5xl mx-auto space-y-8">
+      <div className="text-center mb-8">
+        <h2 className="text-4xl font-bold text-white mb-2">Daily Mood Check-In 🎭</h2>
+        <p className="text-gray-400 text-lg">Quick daily logging and sentiment tracking</p>
+      </div>
+
+      {/* Quick Mood Buttons */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        {[
+          { emoji: '😊', label: 'Great', mood: 'positive (95%)' },
+          { emoji: '🙂', label: 'Good', mood: 'positive (75%)' },
+          { emoji: '😐', label: 'Okay', mood: 'neutral (50%)' },
+          { emoji: '😔', label: 'Down', mood: 'negative (70%)' },
+          { emoji: '😢', label: 'Very Down', mood: 'negative (90%)' }
+        ].map((item) => (
+          <button
+            key={item.label}
+            onClick={async () => {
+              if (!userId) return alert("Please login");
+              try {
+                const saved = await logMood({ userId, mood: `${item.label} - ${item.mood}` });
+                const savedLogs = saved.moodLogs || saved;
+                setLogs(Array.isArray(savedLogs) ? savedLogs.slice().reverse() : []);
+                alert(`Mood logged: ${item.label}`);
+              } catch (err) {
+                console.error(err);
+              }
+            }}
+            className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 hover:from-purple-900/40 hover:to-pink-900/40 border border-gray-700 hover:border-purple-500/40 p-6 rounded-2xl transition-all duration-300 hover:scale-105"
+          >
+            <div className="text-5xl mb-2">{item.emoji}</div>
+            <div className="text-white font-semibold">{item.label}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Detailed Entry Card */}
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl border border-purple-500/20">
+        <h3 className="text-2xl font-bold text-white mb-4">📝 Detailed Entry (Optional)</h3>
+        <p className="text-gray-400 mb-4">Want to write more? Add context to your mood for better tracking.</p>
         <textarea
-          rows={4}
-          className="w-full p-2 border rounded"
-          placeholder="Write a sentence or two about how you feel..."
+          rows={3}
+          className="w-full px-5 py-4 bg-gray-900/50 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 outline-none transition-all resize-none"
+          placeholder="Optional: Add details about your day or what's affecting your mood..."
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
-        <div className="flex gap-3 mt-3">
+        <div className="flex gap-3 mt-6">
           <button
             onClick={handleAnalyzeAndSave}
-            disabled={analysing}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            disabled={analysing || !text.trim()}
+            className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {analysing ? "Analyzing..." : "Analyze & Save"}
+            {analysing ? "Analyzing..." : "📊 Analyze & Save"}
           </button>
 
           {isCrisisSuggested() && (
             <button
               onClick={handleSendSOS}
               disabled={loading}
-              className="px-4 py-2 bg-red-600 text-white rounded"
+              className="px-6 py-3 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-xl font-semibold hover:from-red-600 hover:to-orange-600 transition-all duration-300 shadow-lg disabled:opacity-50"
             >
-              {loading ? "Sending..." : "Send SOS"}
+              {loading ? "Sending..." : "🆘 Send SOS"}
             </button>
           )}
         </div>
 
+        {/* Analysis Results */}
         {analysis && (
-          <div className="mt-4 p-3 bg-gray-50 border rounded">
-            <div className="text-sm text-gray-600">Sentiment: <strong>{analysis.label}</strong> ({Math.round(analysis.score * 100)}%)</div>
-            {advice && (
-              <div className="mt-2">
-                <strong>Quick tip:</strong>
-                <p className="mt-1 whitespace-pre-wrap">{advice}</p>
-              </div>
-            )}
+          <div className="mt-6 p-6 bg-gradient-to-br from-purple-900/30 to-pink-900/30 border border-purple-500/30 rounded-xl">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-2xl">📊</span>
+              <h4 className="text-lg font-semibold text-white">Sentiment Analysis</h4>
+            </div>
+            <div className="bg-gray-900/50 p-4 rounded-lg">
+              <p className="text-sm text-gray-400 mb-1">Detected Sentiment</p>
+              <p className="text-xl font-bold text-purple-400">
+                {analysis.label} ({Math.round(analysis.score * 100)}% confidence)
+              </p>
+            </div>
             {isCrisisSuggested() && (
-              <div className="mt-3 text-sm text-red-700">
-                Strong negative sentiment detected. If you feel unsafe, please send SOS or contact local emergency services.
+              <div className="mt-4 p-4 bg-red-900/20 border border-red-500/30 rounded-lg">
+                <p className="text-sm text-red-400 font-semibold">
+                  ⚠️ Strong negative sentiment detected. Consider talking to our AI Coach or sending SOS if needed.
+                </p>
               </div>
             )}
           </div>
         )}
       </div>
 
-      <div className="bg-white p-6 rounded shadow">
-        <h3 className="text-lg font-semibold mb-3">Recent mood logs</h3>
+      {/* Need to Talk? CTA */}
+      <div className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 p-6 rounded-2xl border border-blue-500/20 flex items-center justify-between">
+        <div>
+          <h3 className="text-xl font-bold text-white mb-1">Need someone to talk to?</h3>
+          <p className="text-gray-400">Our AI Coach is available 24/7 for deeper conversations</p>
+        </div>
+        <Link 
+          to="/coach" 
+          className="px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl font-semibold hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg whitespace-nowrap"
+        >
+          Talk to Coach →
+        </Link>
+      </div>
+
+      {/* Recent Mood Logs */}
+      <div className="bg-gradient-to-br from-gray-800/80 to-gray-900/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl border border-purple-500/20">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-2xl font-bold text-white">Your Mood History 📈</h3>
+          <span className="text-sm text-gray-400">{logs.length} total entries</span>
+        </div>
         {logs.length === 0 ? (
-          <div className="text-sm text-gray-500">No entries yet.</div>
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">📭</div>
+            <p className="text-gray-400">No entries yet. Log your first mood above!</p>
+          </div>
         ) : (
           <ul className="space-y-3">
             {logs.map((l, idx) => (
-              <li key={idx} className="p-3 border rounded">
-                <div className="text-sm text-gray-500">{new Date(l.date).toLocaleString()}</div>
-                <div className="mt-1">{l.mood}</div>
+              <li key={idx} className="bg-gray-900/50 p-5 border border-gray-700 rounded-xl hover:border-purple-500/30 transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">
+                      {new Date(l.date).toLocaleString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        year: 'numeric', 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })}
+                    </p>
+                    <p className="text-lg text-purple-400 font-semibold">{l.mood}</p>
+                  </div>
+                  <span className="text-2xl">
+                    {l.mood.toLowerCase().includes('great') || l.mood.toLowerCase().includes('good') || l.mood.toLowerCase().includes('positive') ? '😊' : 
+                     l.mood.toLowerCase().includes('down') || l.mood.toLowerCase().includes('negative') ? '😔' : '😐'}
+                  </span>
+                </div>
               </li>
             ))}
           </ul>

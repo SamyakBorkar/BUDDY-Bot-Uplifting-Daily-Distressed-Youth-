@@ -52,8 +52,11 @@ const getMoodLogs = async (req, res) => {
 
 const sendSOS = async (req, res) => {
   try {
-    const { reg_no, message } = req.body;
-    await sendCounsellorAlert(reg_no, message);
+    const { userId, message } = req.body;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ message: "User not found" });
+    
+    await sendCounsellorAlert(user.reg_no, message);
     res.json({ success: true, message: "Counsellor notified" });
   } catch (err) {
     console.error(err);

@@ -12,7 +12,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800">
       <Navbar />
       <main className="flex-1 container mx-auto px-4 py-8">
         <Routes>
@@ -47,8 +47,11 @@ export default function App() {
           />
         </Routes>
       </main>
-      <footer className="bg-white border-t p-4 text-center text-sm text-gray-500">
-        © {new Date().getFullYear()} BUDDY
+      <footer className="bg-gray-900/50 backdrop-blur-sm border-t border-gray-800 p-6 text-center text-sm text-gray-400">
+        <div className="flex items-center justify-center gap-2">
+          <span className="text-purple-400">❤️</span>
+          <span>© {new Date().getFullYear()} BUDDY - Your AI Companion for Well-being</span>
+        </div>
       </footer>
     </div>
   );
