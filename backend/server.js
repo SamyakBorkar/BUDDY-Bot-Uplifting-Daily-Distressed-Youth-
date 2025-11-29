@@ -1,13 +1,15 @@
-const express = require('express')
-const app = express();
-const db = require('./config/db.js')
-const cors = require('cors')
-const dotenv = require('dotenv')
-const userRoutes = require('./routes/userRoutes.js')
-const chatRoutes = require("./routes/chatRoutes");
-
-
+// Load env FIRST before any other requires that depend on it
+const dotenv = require('dotenv');
 dotenv.config();
+
+const express = require('express');
+const app = express();
+const cors = require('cors');
+// Require DB after env so MONGO_URI is available
+const db = require('./config/db.js');
+// Routes (they may read env vars at module load)
+const userRoutes = require('./routes/userRoutes.js');
+const chatRoutes = require('./routes/chatRoutes');
 app.use(cors())
 app.use(express.json())
 db();

@@ -48,7 +48,12 @@ export default function Coach() {
 
     try {
       const data = await sendToServer(trimmed);
-      setMessages(prev => [...prev, { sender: "bot", text: data.response }]);
+      setMessages(prev => [...prev, { 
+        sender: "bot", 
+        text: data.response,
+        stressLevel: data.stressLevel,
+        resource: data.resource
+      }]);
 
       if (data.alertTriggered) {
         setBlocked(true);
@@ -131,9 +136,25 @@ export default function Coach() {
               <div className={`max-w-[80%] px-5 py-3 rounded-2xl ${
                 m.sender === "user" 
                   ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg" 
+                  : m.stressLevel === 'HIGH'
+                  ? "bg-gradient-to-br from-red-900/40 to-orange-900/40 text-gray-100 border-2 border-red-500/50"
+                  : m.stressLevel === 'MEDIUM'
+                  ? "bg-gradient-to-br from-yellow-900/30 to-orange-900/30 text-gray-100 border border-yellow-500/40"
                   : "bg-gray-800/80 text-gray-100 border border-gray-700"
               }`}>
-                <p className="text-sm leading-relaxed">{m.text}</p>
+                <p className="text-sm leading-relaxed whitespace-pre-line">{m.text}</p>
+                {m.resource && (
+                  <div className="mt-3 pt-3 border-t border-gray-600">
+                    <a 
+                      href={m.resource.video} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg hover:from-blue-600 hover:to-purple-600 transition-all text-white text-sm font-semibold"
+                    >
+                      <span>▶️</span> Watch Video
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           ))}
